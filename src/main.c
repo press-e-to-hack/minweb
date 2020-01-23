@@ -1,46 +1,47 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
+#include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
-#define MAXBUF 4096
+#define ERROR -1
+#define MAX_BUF 4096
+#define MAX_CLI 5
 
-void *get_in_addr(struct sockaddr *sa)
+void *get_in_addr(struct sockaddr * sa)
 {
 	if (sa->sa_family == AF_INET)
 		return &(((struct sockaddr_in *)sa)->sin_addr);
-
+	
 	return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
-	int sock, status, msgbytes;
+	int sock, cli, msgbytes, status;
 	struct addrinfo serv, *servinfo, *p;
 	struct sockaddr_storage connector;
-	char buf[MAXBUF];
-	char *cls = "close\0";
-	socklen_t addr_len;
 	char s[INET6_ADDRSTRLEN];
+	char buf[MAX_BUF];
 	char *port = argv[1];
+	socklen_t addr_len;
 
 	memset(&serv, 0, sizeof serv);
 	serv.ai_family = AF_UNSPEC;
-	serv.ai_socktype = SOCK_DGRAM;
+	serv.ai_socktype = SOCK_STREAM;
 	serv.ai_flags = AI_PASSIVE;
 
 	if ((status = getaddrinfo(NULL, port, &serv, &servinfo)) != 0)
 	{
-		fprintf(stderr,"Listener: getaddrinfo-> %s\n\n", gai_strerror(status));
-		return 1;
-	}
-
+		fprintf(stderr,"Listener: getaddrinfo->%s\n\n",gai_strerror(status));
+		return 1;	
+	} 
+	
 	for (p = servinfo; p != NULL; p = p->ai_next)
 	{
 		if ((sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
@@ -54,49 +55,54 @@ int main(int argc, char *argv[])
 			perror("Listener: bind");
 			continue;
 		}
-
 		break;
 	}
 
 	if (p == NULL)
 	{
-		fprintf(stderr, "Listener: failed to bind socket\n\n");
+		fprintf(stderr, "Listener: failed to bind to socket\n\n");
 		return 2;
 	}
 
 	freeaddrinfo(servinfo);
 
-	printf("Listener: waiting to recvfrom...\n");
+	if (listen(sock, MAX_CLI) == -1)
+	{
+		perror("Listener: listen");
+		return 1;
+	}
+
+	puts("Listener: waiting to recv data...");
+
 	while(1)
 	{
 		addr_len = sizeof connector;
-		if ((msgbytes = recvfrom(sock, buf, MAXBUF-1, 0, (struct sockaddr *)&connector, &addr_len)) == -1)
+		if ((cli = accept(sock, (struct sockaddr *)&connector, &addr_len)) == -1)
 		{
-			perror("Listener: recvfrom");
-			exit(1);
+			perror("Listener: accept");
+			return 1;
 		}
 
-		buf[msgbytes-1] = '\0';
-		
-		printf("Listener: got packet from %s\n",inet_ntop(connector.ss_family, get_in_addr((struct sockaddr *)&connector), s, sizeof s));
-	
-		printf("Listener: packet contains \"%s\"\n", buf);
+		printf("Listener: New connection from port %d and IP %s\n", ((struct sockaddr_in *)&connector)->sin_port, inet_ntop(connector.ss_family, get_in_addr((struct sockaddr *)&connector), s, sizeof s));
 
-		if ((msgbytes = sendto(sock, buf, strlen(buf), 0, (struct sockaddr *)&connector, sizeof s)) == -1)
+		msgbytes = 1;
+
+		while(msgbytes)
 		{
-			perror("Listener: sendto");
-			//continue;
+			msgbytes = recv(cli, buf, MAX_BUF, 0);
+			buf[msgbytes] = '\0';
+			msgbytes++;
+
+			if(msgbytes)
+			{
+				send(cli, buf, msgbytes, 0);
+				printf("Sent msg: %s\n", buf);
+			}
 		}
-		//printf("%d\n\n",strcmp(buf,cls));
-		printf("\n\n");
-		if (strcmp(buf,cls) == 0)
-		{	
-			printf("Listener: Server shutdown from %s\n\n", inet_ntop(connector.ss_family, get_in_addr((struct sockaddr *)&connector), s, sizeof s));
-			break;
-		}
+
+		printf("Listener: client disconnected\n\n");
+		close(cli);
 	}
-
-	close(sock);
-
+	
 	return 0;
 }
