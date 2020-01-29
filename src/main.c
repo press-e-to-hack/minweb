@@ -13,6 +13,8 @@
 #define MAX_BUF 4096
 #define MAX_CLI 5
 
+
+//Util Function
 void *get_in_addr(struct sockaddr * sa)
 {
 	if (sa->sa_family == AF_INET)
@@ -21,6 +23,30 @@ void *get_in_addr(struct sockaddr * sa)
 	return &(((struct sockaddr_in6 *)sa)->sin6_addr);
 }
 
+void *usage()
+{
+	printf("Usage: ./minWeb <port # to listen on>\n\n");
+}
+
+int main(int argc, char **argv)
+{
+
+	if(argc <= 1 || argc > 2)
+	{
+		usage();
+		return 0;
+	}
+
+	const char *const port = argv[1];
+
+	printf("port:%s\n\nargc:%d\n\n",port,argc);
+
+	return 0;
+
+}
+
+
+/*
 int main(int argc, char **argv)
 {
 	int sock, cli, msgbytes, status;
@@ -106,3 +132,4 @@ int main(int argc, char **argv)
 	
 	return 0;
 }
+*/
