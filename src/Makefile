@@ -1,5 +1,5 @@
 CC 		= gcc
-CFLAGS 		= -g
+CFLAGS 		= -g -pedantic -std=c99
 NAME 		= minWeb
 
 program: main.c
