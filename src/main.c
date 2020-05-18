@@ -25,7 +25,7 @@ void *get_in_addr(struct sockaddr * sa)
 
 void *usage()
 {
-	printf("Usage: ./minWeb <port # to listen on>\n\n");
+	printf("Usage: minweb [port]\n\n");
 }
 
 int main(int argc, char **argv)
