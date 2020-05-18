@@ -11,6 +11,12 @@ _A tiny light-weight web server built in C._
 make
 ```
 
+## Usage
+
+```sh
+minweb [port]
+```
+
 ## License
 
 SPDX-License-Identifier: [GPL-3.0-or-later](https://spdx.org/licenses/GPL-3.0-or-later.html)
