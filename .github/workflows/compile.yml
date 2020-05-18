@@ -9,5 +9,4 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - name: make
-      run: make -C src
+    - run: make
